@@ -33,25 +33,6 @@ void KillMan(Man* _man)
 	man_counter--;
 }
 
-/*void ReBuildMan()
-{
-	for (int i = 0; i < man_counter; i++)
-	{
-		if (g_man[i] == NULL)
-		{
-			for (int j = man_counter; j < MAX_MEN; j++)
-			{
-				if (g_man[j] != NULL)
-				{
-					g_man[i] = g_man[j];
-					g_man[j] = NULL;
-					break;
-				}
-			}
-		}
-	}
-}*/
-
 void isPunch() //check for hit
 {
 	WCHAR	szScore[100];
@@ -248,9 +229,6 @@ void GetFigure(int eFigure)
 }
 //-----------------------------------------------------------------------------------------
 
-//-----------------------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------------------
 void	Repaint()
 {
 	DrawStok();
@@ -493,20 +471,7 @@ void Rotate()	//upheaval of figure
 	EraseOldFigur();
 	switch (g_iFigure)
 	{
-	/*case	line:
-		if (g_bFigure[1][0] == TRUE)
-		{
-			ClearFigure(&g_bFigure[0][0]);
-			for (int c = 0; c<4; c++)
-				g_bFigure[0][c] = TRUE;
-		}
-		else
-		{
-			ClearFigure(&g_bFigure[0][0]);
-			for (int c = 0; c<4; c++)
-				g_bFigure[c][0] = TRUE;
-		}
-		OverRight();*/
+	
 	case cube:return;
 	}
 
