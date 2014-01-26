@@ -775,7 +775,7 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE hi, LPSTR l, int i)
 		SIZE_WINDOW_X - 200, 30, 100, 100, g_hwnd, NULL, hInst, NULL);
 
 	ShowWindow(g_hwnd, SW_SHOWNORMAL);
-	SendMessage(g_hwnd, CREATE_MAN,0,0);
+
 	PlaySound(L"Draven.wav", 0, SND_FILENAME | SND_ASYNC);
 	SetTimer(g_hwnd, 2, 50, NULL);
 
