@@ -38,6 +38,7 @@ void isPunch() //check for hit
 	WCHAR	szScore[100];
 	int maxim = 0;
 	int start, end, c;
+	char isHit = 0;
 	c = 0;
 	for (int c1 = 0; c1 < 4; c1++)
 	{
@@ -70,8 +71,33 @@ void isPunch() //check for hit
 				g_iScore += 30;
 				wsprintf(szScore, TEXT("Draveris Score:%d"), g_iScore);
 				SetWindowText(g_hwnd, szScore);
+				isHit++;
 			}
 		}
+	}
+	if (isHit)
+	{
+		isHit--;
+			switch(isHit)
+			{
+			case 0:
+				PlaySound(L"Draven1.wav", 0, SND_FILENAME | SND_ASYNC);
+				break;
+			case 1:
+				PlaySound(L"Draven2.wav", 0, SND_FILENAME | SND_ASYNC);
+				break;
+			case 2:
+				PlaySound(L"Draven3.wav", 0, SND_FILENAME | SND_ASYNC);
+				break;
+			case 3:
+				PlaySound(L"Draven4.wav", 0, SND_FILENAME | SND_ASYNC);
+				break;
+			case 4:
+				PlaySound(L"Draven5.wav", 0, SND_FILENAME | SND_ASYNC);
+				break;
+			default:
+				break;
+			}
 	}
 }
 
@@ -718,7 +744,7 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE hi, LPSTR l, int i)
 	HINSTANCE hInst = GetModuleHandle(NULL);
 	g_hinstance = hInst;
 	TCHAR szClassName[] = TEXT("MainWindows");
-	TCHAR szTitle[] = TEXT("Tetris Score:0");
+	TCHAR szTitle[] = TEXT("Draveris Score:0");
 
 	
 	MSG Msg;
