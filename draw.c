@@ -1,6 +1,9 @@
 #include <Windows.h>
 #include <Windowsx.h>
 #include "const.h"
+#include <gl\gl.h>                
+#include <gl\glu.h>
+#include <gl\glut.h>
 
 extern		HINSTANCE	g_hinstance;
 extern		HWND		g_hwnd, g_hStok, g_hFigure; //windows
@@ -86,4 +89,25 @@ void DrawPicture(HWND hwnd)
 	SelectObject(hdcMem, oldBitmap);
 	DeleteDC(hdcMem);
 	EndPaint(hwnd, &ps);
+}
+
+void drawBlockStationary(float _x, float _y, float _r, float _g, float _b)
+{
+	/* draw outside */
+	cleanObject();
+	glTranslatef(_x, _y, 20);
+	glScalef(1, 1, 1);
+	glColor3f(0.15f, 0.15f, 0.15f);
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+	glutSolidCube(1.0);
+
+	/* fill in the creamy centre */
+	cleanObject();
+	glTranslatef(_x, _y, 20);
+	glScalef(1, 1, 1.2);
+	glColor3f(_r, _g, _b);
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+	glutSolidCube(.85);
 }
