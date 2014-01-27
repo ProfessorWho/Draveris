@@ -9,22 +9,72 @@
 #include "const.h"
 #include "draw.h"
 
+#include <gl\gl.h>                
+#include <gl\glu.h>
+#include <gl\glut.h>
+#include <gl\GLAUX.H>
+
 #pragma comment(linker,"-merge:.rdata=.text")
 #pragma comment (lib, "winmm.lib")
+#pragma comment (lib, "OpenGL32.lib")
+#pragma comment (lib, "GLu32.lib")
+#pragma comment (lib, "glut32.lib")
+#pragma comment (lib, "GLAUX.lib")
 
 //-----------------------------------------------------------------------------------------
 HINSTANCE	g_hinstance;
 HWND		g_hwnd, g_hStok, g_hFigure; //windows
 HMENU		g_hMenu;
 BOOL		g_bFigure[4][4], g_bNextFigur[4][4]; //Massives for figures
-int		g_iStok[HORIZONTAL_LINE][VERTICAL_LINE]; //Massive for glass
+int			g_iStok[HORIZONTAL_LINE][VERTICAL_LINE]; //Massive for glass
 POINT		g_pPozFigure;			//Position of figure at moment
-int		g_iColor, g_iFigure, g_iNextFigure, g_iScore; //color, kind, kind of next, score counter
+int			g_iColor, g_iFigure, g_iNextFigure, g_iScore; //color, kind, kind of next, score counter
 enum		enumFigure{ line = 0, cube, lright, lleft, tfigur, zleft, zright };//kindes of figures
-int		man_counter;
+int			man_counter;
 Man*		g_man[5]; //Massive of men
-int		Timer_id[5]; //massive for linking men and threads
+int			Timer_id[5]; //massive for linking men and threads
 HBITMAP		hBitmap;
+HGLRC		hRC;
+HDC			hDC;
+HWND		glwnd;
+AUX_RGBImageRec* photo_image;
+
+int background[27][12] =
+{
+	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
+};
+
+GLfloat rquad;
+
+GLfloat LightAmbient[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+GLfloat LightDiffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+GLfloat LightPosition[] = { 0.0f, 0.0f, 2.0f, 1.0f };
 //-----------------------------------------------------------------------------------------
 
 void KillMan(Man* _man)
@@ -32,6 +82,7 @@ void KillMan(Man* _man)
 	free(_man);
 	man_counter--;
 }
+
 
 void isPunch() //check for hit
 {
@@ -255,9 +306,13 @@ void GetFigure(int eFigure)
 }
 //-----------------------------------------------------------------------------------------
 
+//-----------------------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------------------
 void	Repaint()
 {
-	DrawStok();
+	DrawGLScene();
+	SwapBuffers(hDC);
 	DrawFigure();
 }
 //-----------------------------------------------------------------------------------------
@@ -430,7 +485,8 @@ void MoveRight()
 		tms = TRUE;
 	if (!tms) g_pPozFigure.x++;
 	PaintNewFigur();
-	DrawStok();
+	DrawGLScene();
+	SwapBuffers(hDC);
 }
 //-----------------------------------------------------------------------------------------
 void MoveLeft()
@@ -454,7 +510,8 @@ void MoveLeft()
 	EraseOldFigur();
 	if (!tms)g_pPozFigure.x--;
 	PaintNewFigur();
-	DrawStok();
+	DrawGLScene();
+	SwapBuffers(hDC);
 }
 //-----------------------------------------------------------------------------------------
 void MoveDown()
@@ -463,7 +520,8 @@ void MoveDown()
 	EraseOldFigur();
 	if (g_pPozFigure.y<VERTICAL_LINE)g_pPozFigure.y++;
 	PaintNewFigur();
-	DrawStok();
+	DrawGLScene();
+	SwapBuffers(hDC);
 }
 //-----------------------------------------------------------------------------------------
 void OverRight() //Move left figure, if it went off the screen
@@ -497,7 +555,6 @@ void Rotate()	//upheaval of figure
 	EraseOldFigur();
 	switch (g_iFigure)
 	{
-	
 	case cube:return;
 	}
 
@@ -631,12 +688,100 @@ void OnGetMinMaxInfo(HWND hwnd, LPMINMAXINFO lpMinMaxInfo)
 	lpMinMaxInfo->ptMinTrackSize.y = SIZE_WINDOW_Y;
 }
 //-----------------------------------------------------------------------------------------
+/*GLvoid LoadGLTextures()
+{
+	glEnable(GL_TEXTURE_2D);
+	photo_image = auxDIBImageLoad(L"svb.bmp");
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glTexImage2D(GL_TEXTURE_2D, 0, 3,
+		photo_image->sizeX,
+		photo_image->sizeY,
+		0, GL_RGB, GL_UNSIGNED_BYTE,
+		photo_image->data);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+}*/
+
+void cleanObject()
+{
+	glLoadIdentity();
+	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);	/* reverts back to white color so you get no screw-ups */
+	glBindTexture(GL_TEXTURE_2D, NULL); /* untexture to NULL so u can set color with no crap */
+	glTranslatef(0.0f, -1.0f, -2.0f);
+
+	/* apply camera rotations if ortho mode is off */
+		gluLookAt(
+			0.0f, 1.5f, -17.0f,
+			0.0f, -5.4f, 3.0f,
+			0.0f, 1.0f, 0.0f);
+}
+int DrawGLScene(GLvoid)                
+{
+	int i, j;
+	float r, g, b;
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	cleanObject();
+	
+	for (i = 0; i < 27; i++)
+	{
+		for (j = 0; j < 12; j++)
+		{
+			if (background[i][j] != 0)
+			{
+
+				cleanObject();
+				glTranslatef((j*-1) + 5.5, (i*-1) + 1, 20);
+				glScalef(1, 1, 1);
+				glColor4f(0.16, 0.16, 0.16, 1.0f);
+				glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+				glEnable(GL_COLOR_MATERIAL);
+				glutSolidCube(1);
+				
+			}
+		}
+	}
+
+	for (i = 0; i < 10; i++)
+	{
+		for (j = 0; j < 25; j++)
+		{
+			if (g_iStok[i][j] > 30)
+			{
+								
+					drawBlockStationary((i*-1) + 4.5, (j*-1), 1.0, 3.0, 0.2);		
+			}
+		}
+	}
+
+	for (int i = 0; i < MAX_MEN; i++)
+	{
+		if (g_man[i] != NULL)
+		{
+			cleanObject();
+			glPushMatrix();
+			glTranslated(((float)g_man[i]->x / 30)*-1 + 4.5, -24.0, 20.0);  
+			glColor3f(0.3, 0.3, 0.3);
+			glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+			glEnable(GL_COLOR_MATERIAL);
+			glutSolidSphere(0.4, 50, 50);
+			glPopMatrix();
+		}
+	}
+
+
+	return 0;                
+}
+
 void OnPaint(HWND hwnd)
 {
 	PAINTSTRUCT ps;
+	DrawGLScene();
+	SwapBuffers(hDC);
 	DrawPicture(hwnd);
 	BeginPaint(hwnd, &ps);
-	DrawStok();
+
 	DrawFigure();
 	EndPaint(hwnd, &ps);
 }
@@ -666,6 +811,7 @@ void OnTimer(HWND hwnd, UINT id)
 	{
 		if (g_iStok[i][24] == 30)
 		{
+			srand(time(NULL));
 			isMan = rand() % 100;
 			if (isMan > 70 && man_counter < MAX_MEN)
 				CreateThread(NULL, 0, CreateManThread, NULL, 0, NULL);
@@ -690,7 +836,8 @@ void OnKeyDown(HWND hwnd, UINT vk, BOOL fDown, int cRepeat, UINT flags)
 	case VK_UP:
 		Rotate();
 		PaintNewFigur();
-		DrawStok();
+		DrawGLScene();
+		SwapBuffers(hDC);
 		break;
 	}
 }
@@ -713,7 +860,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 							OnTimer(hwnd, msg, wParam, lParam);
 							return 0;
 						case 2:
-							DrawStok();
+							DrawGLScene();
+							SwapBuffers(hDC);
 							return 0;
 						}
 	}
@@ -739,14 +887,91 @@ LRESULT CALLBACK WndStokProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	}
 }
 
+GLvoid ReSizeGLScene(GLsizei width, GLsizei height)        
+{
+	if (height == 0)            
+	{
+		height = 1;
+	}
+
+	glViewport(0, 0, width, height);
+	glMatrixMode(GL_PROJECTION);            
+	glLoadIdentity();           
+
+	
+	gluPerspective(45.0f, (GLfloat)width / (GLfloat)height, 0.1f, 100.0f);
+
+	glMatrixMode(GL_MODELVIEW);            
+	glLoadIdentity();             
+}
+
+int InitGL(GLvoid)                
+{
+	glShadeModel(GL_SMOOTH);
+
+	/*LoadGLTextures();*/
+	glEnable(GL_TEXTURE_2D);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClearDepth(1.0f);              
+	glEnable(GL_DEPTH_TEST);           
+	glDepthFunc(GL_LEQUAL);
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+	glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
+	glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
+	glEnable(GL_LIGHT1);
+	glEnable(GL_LIGHTING);
+
+	return 0;
+}
+
+GLvoid KillGLWindow(GLvoid)            
+{
+	if (hRC)             
+	{
+		if (!wglMakeCurrent(NULL, NULL))      
+		{
+			MessageBox(NULL, "Release Of DC And RC Failed.", "SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
+		}
+		if (!wglDeleteContext(hRC))        
+		{
+			MessageBox(NULL, "Release Rendering Context Failed.", "SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
+		}
+		hRC = NULL;             
+	}
+	if (hDC && !ReleaseDC(glwnd, hDC))    
+	{
+		MessageBox(NULL, "Release Device Context Failed.", "SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
+		hDC = NULL;  
+	}
+	if (glwnd && !DestroyWindow(glwnd))       
+	{
+		MessageBox(NULL, "Could Not Release hWnd.", "SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
+		glwnd = NULL; 
+	}
+	if (!UnregisterClass("OpenGL", g_hinstance))  
+	{
+		MessageBox(NULL, "Could Not Unregister Class.", "SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
+		g_hinstance = NULL;      
+	}
+}
+
+
+
+
+
 int WINAPI WinMain(HINSTANCE h, HINSTANCE hi, LPSTR l, int i)
 {
 	HINSTANCE hInst = GetModuleHandle(NULL);
 	g_hinstance = hInst;
 	TCHAR szClassName[] = TEXT("MainWindows");
 	TCHAR szTitle[] = TEXT("Draveris Score:0");
+	GLuint    PixelFormat;
+	hRC = NULL;      
+	hDC = NULL;
+	DWORD    dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;      
+	DWORD    dwStyle = WS_CHILD;
 
-	
 	MSG Msg;
 	WNDCLASS wc;
 	ZeroMemory(&wc, sizeof(wc));
@@ -763,18 +988,79 @@ int WINAPI WinMain(HINSTANCE h, HINSTANCE hi, LPSTR l, int i)
 	wc.lpfnWndProc = WndStokProc;
 	RegisterClass(&wc);
 	wc.lpszClassName = TEXT("WndStok");
+	wc.hbrBackground = (HBRUSH)CreateSolidBrush(RGB(255, 255, 255));
 	RegisterClass(&wc);
 
 	g_hwnd = CreateWindow(szClassName, szTitle, WS_OVERLAPPEDWINDOW,
 		0, 0, SIZE_WINDOW_X, SIZE_WINDOW_Y, HWND_DESKTOP, NULL, hInst, NULL);
-	
-	g_hStok = CreateWindow(TEXT("WndStok"), szTitle, WS_VISIBLE | WS_BORDER | WS_CHILD,
-		20, 20, 300, 700, g_hwnd, NULL, hInst, NULL);
+
+	g_hStok = CreateWindow(TEXT("WndStok"), szTitle, WS_VISIBLE | WS_CHILD, 20, 20, 300, 700, g_hwnd, NULL, hInst, NULL);
+
+	static  PIXELFORMATDESCRIPTOR pfd =           
+	{
+		sizeof(PIXELFORMATDESCRIPTOR),     
+		1,                 
+		PFD_DRAW_TO_WINDOW |    
+		PFD_SUPPORT_OPENGL |    
+		PFD_DOUBLEBUFFER,            
+		PFD_TYPE_RGBA,       
+		32,         
+		0, 0, 0, 0, 0, 0,     
+		0,            
+		0,         
+		0,         
+		0, 0, 0, 0,        
+		32,      
+		0,       
+		0,      
+		PFD_MAIN_PLANE,      
+		0,         
+		0, 0, 0 
+	};
+
+	if (!(hDC = GetDC(g_hStok)))    
+	{
+		KillGLWindow();   
+		MessageBox(NULL, "Can't Create A GL Device Context.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
+		return FALSE;             
+	}
+
+	if (!(PixelFormat = ChoosePixelFormat(hDC, &pfd)))     
+	{
+		KillGLWindow();            
+		MessageBox(NULL, "Can't Find A Suitable PixelFormat.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
+		return FALSE;              
+	}
+
+	if (!SetPixelFormat(hDC, PixelFormat, &pfd))    
+	{
+		KillGLWindow();    
+		MessageBox(NULL, "Can't Set The PixelFormat.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
+		return FALSE;    
+	}
+
+	if (!(hRC = wglCreateContext(hDC))) 
+	{
+		KillGLWindow();   
+		MessageBox(NULL, "Can't Create A GL Rendering Context.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
+		return FALSE;  
+	}
+
+	if (!wglMakeCurrent(hDC, hRC))  
+	{
+		KillGLWindow();  
+		MessageBox(NULL, "Can't Activate The GL Rendering Context.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
+		return FALSE;    
+	}
+
+	InitGL();             
 
 	g_hFigure = CreateWindow(TEXT("WndFigure"), szTitle, WS_VISIBLE | WS_BORDER | WS_CHILD,
 		SIZE_WINDOW_X - 200, 30, 100, 100, g_hwnd, NULL, hInst, NULL);
 
 	ShowWindow(g_hwnd, SW_SHOWNORMAL);
+	SetForegroundWindow(g_hStok);  
+	ReSizeGLScene(300, 700);
 
 	PlaySound(L"Draven.wav", 0, SND_FILENAME | SND_ASYNC);
 	SetTimer(g_hwnd, 2, 50, NULL);
