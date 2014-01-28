@@ -37,7 +37,8 @@ HBITMAP		hBitmap;
 HGLRC		hRC;
 HDC			hDC;
 HWND		glwnd;
-AUX_RGBImageRec* photo_image;
+
+GLuint		texture[1];
 
 int background[27][12] =
 {
@@ -69,8 +70,6 @@ int background[27][12] =
 	{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
 	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
 };
-
-GLfloat rquad;
 
 GLfloat LightAmbient[] = { 0.5f, 0.5f, 0.5f, 1.0f };
 GLfloat LightDiffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -306,9 +305,6 @@ void GetFigure(int eFigure)
 }
 //-----------------------------------------------------------------------------------------
 
-//-----------------------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------------------
 void	Repaint()
 {
 	DrawGLScene();
@@ -346,6 +342,7 @@ void NextFigure()
 //-----------------------------------------------------------------------------------------
 void NewGame()
 {
+	WCHAR	szScore[100];
 	srand(GetTickCount() % 100);
 	g_iScore = 0;
 	ClearFigure(&g_bNextFigur[0][0]);
@@ -360,6 +357,9 @@ void NewGame()
 		KillMan(g_man[i]);
 		g_man[i] = NULL;
 	}
+	g_iScore = 0;
+	wsprintf(szScore, TEXT("Draveris Score:%d"), g_iScore);
+	SetWindowText(g_hwnd, szScore);
 	NextFigure();
 	Repaint();
 }
@@ -688,20 +688,21 @@ void OnGetMinMaxInfo(HWND hwnd, LPMINMAXINFO lpMinMaxInfo)
 	lpMinMaxInfo->ptMinTrackSize.y = SIZE_WINDOW_Y;
 }
 //-----------------------------------------------------------------------------------------
-/*GLvoid LoadGLTextures()
-{
-	glEnable(GL_TEXTURE_2D);
-	photo_image = auxDIBImageLoad(L"svb.bmp");
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexImage2D(GL_TEXTURE_2D, 0, 3,
-		photo_image->sizeX,
-		photo_image->sizeY,
-		0, GL_RGB, GL_UNSIGNED_BYTE,
-		photo_image->data);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-}*/
+
+GLvoid LoadGLTextures()
+{
+
+	AUX_RGBImageRec *texture1;
+	texture1 = auxDIBImageLoad(L"svb.bmp");
+	glGenTextures(1, &texture[0]);
+	glBindTexture(GL_TEXTURE_2D, texture[0]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, texture1->sizeX, texture1->sizeY, 0,
+		GL_RGB, GL_UNSIGNED_BYTE, texture1->data);
+
+}
 
 void cleanObject()
 {
@@ -720,6 +721,7 @@ int DrawGLScene(GLvoid)
 {
 	int i, j;
 	float r, g, b;
+	GLUquadricObj *quadObj;
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	cleanObject();
@@ -735,6 +737,7 @@ int DrawGLScene(GLvoid)
 				glTranslatef((j*-1) + 5.5, (i*-1) + 1, 20);
 				glScalef(1, 1, 1);
 				glColor4f(0.16, 0.16, 0.16, 1.0f);
+				
 				glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 				glEnable(GL_COLOR_MATERIAL);
 				glutSolidCube(1);
@@ -761,12 +764,20 @@ int DrawGLScene(GLvoid)
 		{
 			cleanObject();
 			glPushMatrix();
-			glTranslated(((float)g_man[i]->x / 30)*-1 + 4.5, -24.0, 20.0);  
-			glColor3f(0.3, 0.3, 0.3);
+			glTranslated(((float)g_man[i]->x / 30)*-1 + 4.5, -24.0, 20.0);
+			glRotated(120, 1, 0, 0);
+			glRotated(180, 0, 1, 0);
+			quadObj = gluNewQuadric();
+			glBindTexture(GL_TEXTURE_2D, texture[0]);
+			gluQuadricTexture(quadObj, GL_TRUE);
+			gluQuadricDrawStyle(quadObj, GLU_FILL);
+			glColor3d(0.3, 0.3, 0.3);
 			glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 			glEnable(GL_COLOR_MATERIAL);
-			glutSolidSphere(0.4, 50, 50);
+			gluSphere(quadObj, 0.45, 50, 50);
 			glPopMatrix();
+			gluDeleteQuadric(quadObj);
+			auxSwapBuffers();
 		}
 	}
 
@@ -897,19 +908,15 @@ GLvoid ReSizeGLScene(GLsizei width, GLsizei height)
 	glViewport(0, 0, width, height);
 	glMatrixMode(GL_PROJECTION);            
 	glLoadIdentity();           
-
-	
 	gluPerspective(45.0f, (GLfloat)width / (GLfloat)height, 0.1f, 100.0f);
-
 	glMatrixMode(GL_MODELVIEW);            
 	glLoadIdentity();             
 }
 
 int InitGL(GLvoid)                
 {
+	LoadGLTextures();
 	glShadeModel(GL_SMOOTH);
-
-	/*LoadGLTextures();*/
 	glEnable(GL_TEXTURE_2D);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClearDepth(1.0f);              
@@ -955,10 +962,6 @@ GLvoid KillGLWindow(GLvoid)
 		g_hinstance = NULL;      
 	}
 }
-
-
-
-
 
 int WINAPI WinMain(HINSTANCE h, HINSTANCE hi, LPSTR l, int i)
 {
