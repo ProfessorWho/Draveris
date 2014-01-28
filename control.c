@@ -36,7 +36,7 @@ void OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 	}
 	case ID_MENU_EXIT:
 	{
-						 ExitProcess(TRUE);
+						 ExitProcess(0);
 						 break;
 	}
 	}
