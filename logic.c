@@ -223,7 +223,7 @@ void LineClear() //Check for full line
 				}
 			}
 			g_iScore += 100;
-			wsprintf(szScore, TEXT("Tetris Score:%d"), g_iScore);
+			wsprintf(szScore, TEXT("Draveris Score:%d"), g_iScore);
 			SetWindowText(g_hwnd, szScore);
 		}
 	} while (bLineFill);
